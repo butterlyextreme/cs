@@ -1,0 +1,23 @@
+spring:
+  main:
+    banner-mode: "off"
+  datasource:
+    url:  jdbc:h2:mem:testdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    show_sql: false
+  h2:
+    console:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    org:
+      springframework:
+        web:
+          filter:
+            CommonsRequestLoggingFilter: DEBUG
