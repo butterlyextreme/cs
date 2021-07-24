@@ -3,6 +3,7 @@ package org.task.data.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.task.controller.ResourceNotFoundException;
 import org.task.data.entity.ExecutionsEntity;
 import org.task.data.entity.OrdersEntity;
 import org.task.data.model.Order;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrderBookStatisticsServiceImpl implements OrderBookStatisticsService {
 
+    public static final int MARKET_PRICE = -1;
     private final OrdersRepository ordersRepository;
     private final ExecutionsRepository executionsRepository;
 
@@ -47,11 +49,11 @@ public class OrderBookStatisticsServiceImpl implements OrderBookStatisticsServic
         return stats;
     }
 
-    public Order getOrderById(UUID id){
+    public Order getOrderById(final UUID id){
         log.debug("About to retrieve order for id [{}]",id);
         return processOrderExecutions().stream()
                 .filter(o -> o.getId().equals(id))
-                .findFirst().orElseThrow(() -> new RuntimeException("Order not found for id :" +  id));
+                .findFirst().orElseThrow(() -> new ResourceNotFoundException("Order not found for id :" +  id));
     }
 
     private List<Order> processOrderExecutions() {
@@ -81,7 +83,7 @@ public class OrderBookStatisticsServiceImpl implements OrderBookStatisticsServic
         return allOrders;
     }
 
-    private List<OrderBookStat> getOrderBookStats(List<Order> allOrders) {
+    private List<OrderBookStat> getOrderBookStats(final List<Order> allOrders) {
         return allOrders.stream()
                 .collect(Collectors.groupingBy(Order::getInstrumentId))
                 .entrySet().stream()
@@ -89,13 +91,14 @@ public class OrderBookStatisticsServiceImpl implements OrderBookStatisticsServic
                 .collect(Collectors.toList());
     }
 
-    private Order executeOrder(Order order, Map.Entry<Integer, Integer> totalExecutionDemand) {
+    private Order executeOrder(final Order order, final Map.Entry<Integer, Integer> totalExecutionDemand) {
         int demand = totalExecutionDemand.getValue();
         int price = totalExecutionDemand.getKey();
         int quantity = order.getQuantity();
         order.setValid(true);
+        int orderPrice = order.getPrice() == null ? MARKET_PRICE : order.getPrice();
 
-        if (order.getPrice() < price) {
+        if (orderPrice != MARKET_PRICE && orderPrice < price) {
             order.setValid(false);
             return order;
         }
@@ -137,7 +140,7 @@ public class OrderBookStatisticsServiceImpl implements OrderBookStatisticsServic
             if (orderDate.isAfter(lastOrder)) {
                 lastOrder = orderDate;
             }
-            if (orderDate.isBefore(firstOrder)) {
+            if (orderDate.isBefore(firstOrder) || firstOrder.equals(Instant.EPOCH)) {
                 firstOrder = orderDate;
             }
             demand += quantity;
@@ -145,6 +148,7 @@ public class OrderBookStatisticsServiceImpl implements OrderBookStatisticsServic
             executionPrice = Math.max(executionPrice, order.getExecutionPrice());
         }
 
+        // Create the Limit breakdown map
         Map<Integer, Integer> limitBreakdown = orders.stream()
                 .collect(Collectors.groupingBy(Order::getPrice,
                         Collectors.summingInt(Order::getQuantity)));

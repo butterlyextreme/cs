@@ -31,11 +31,13 @@ public class OrdersEntity {
     private String instrumentId;
 
     private Integer price;
-
     private Integer quantity;
-
     private Instant date;
     private Boolean invalid;
 
+
+    @ManyToOne
+    @JoinColumn(name = "book_id", referencedColumnName = "id", nullable = false)
+    private OrderBookEntity orderBook;
 
 }

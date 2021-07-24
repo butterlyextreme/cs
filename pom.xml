@@ -95,7 +95,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
           org.task.controller.contract
         </basePackageForTests>
         <baseClassForTests>
-          org.task.controller.contract.RankingControllerBase
+          org.task.controller.contract.OrderBookControllerBase
         </baseClassForTests>
         <testFramework>JUNIT5</testFramework>
         <testMode>EXPLICIT</testMode>
