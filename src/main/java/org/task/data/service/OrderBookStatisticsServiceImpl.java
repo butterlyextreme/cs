@@ -9,6 +9,7 @@ import org.task.data.entity.OrdersEntity;
 import org.task.data.model.Order;
 import org.task.data.model.OrderBookStat;
 import org.task.data.respository.ExecutionsRepository;
+import org.task.data.respository.OrderBookRepository;
 import org.task.data.respository.OrdersRepository;
 
 import java.time.Instant;
@@ -24,63 +25,65 @@ import java.util.stream.Collectors;
 public class OrderBookStatisticsServiceImpl implements OrderBookStatisticsService {
 
     private static final int MARKET_ORDER = -1;
+    public static final String CLOSED = "CLOSED";
     private final OrdersRepository ordersRepository;
     private final ExecutionsRepository executionsRepository;
+    private final OrderBookRepository orderBookRepository;
 
     public List<OrderBookStat> retrieveAllOrderBookStats() {
         log.debug("About to retrieve order book stats for all order books");
-
         List<OrderBookStat> stats = getOrderBookStats(ordersRepository.findAll()
                 .stream()
                 .map(this::toOrder)
                 .collect(Collectors.toList()));
-
         log.info("Completed the retrieval of the order book stats for all order books");
         return stats;
     }
 
     public List<OrderBookStat> retrieveAllOrderBookStatsExecuted() {
         log.debug("About to retrieve order book stats for orders with executions");
-
         final List<Order> allOrders = processOrderExecutions();
         List<OrderBookStat> stats = getOrderBookStats(allOrders);
-
         log.info("Completed the retrieval of the order book stats for orders with executions");
         return stats;
     }
 
-    public Order getOrderById(final UUID id){
-        log.debug("About to retrieve order for id [{}]",id);
+    public Order getOrderById(final UUID id) {
+        log.debug("About to retrieve order for id [{}]", id);
         return processOrderExecutions().stream()
                 .filter(o -> o.getId().equals(id))
-                .findFirst().orElseThrow(() -> new ResourceNotFoundException("Order not found for id :" +  id));
+                .findFirst().orElseThrow(() -> new ResourceNotFoundException("Order not found for id :" + id));
     }
 
     private List<Order> processOrderExecutions() {
-
-        Map<String, List<Order>> orderMap = ordersRepository.findAll()
-                .stream()
-                .map(this::toOrder)
-                .collect(Collectors.toList()).stream()
-                .collect(Collectors.groupingBy(Order::getInstrumentId));
-
         final List<Order> executedOrders = new ArrayList<>();
 
-        orderMap.forEach((k, v) -> {
-            // Retrieve the total price execution demand
-            Map<Integer, Integer> totalPriceExecutionDemand = toAccumulatedExecution(k);
+        orderBookRepository.findByState(CLOSED).forEach(ob -> {
+            //Map<instrumentId, List<Orders>
+            Map<String, List<Order>> orderMap = ob.getOrdersEntities()
+                    .stream()
+                    .map(this::toOrder)
+                    .collect(Collectors.toList()).stream()
+                    .collect(Collectors.groupingBy(Order::getInstrumentId));
 
-            // Only execute orders if we have executions
-            if (totalPriceExecutionDemand.size() == 1) {
+            orderMap.forEach((k, v) -> {
+                // Retrieve the total price execution demand
+                Map<Integer, Integer> totalPriceExecutionDemand = toAccumulatedExecution(k);
 
                 // Get orders per instrument
                 List<Order> orders = orderMap.get(k);
-                Map.Entry<Integer, Integer> entry = totalPriceExecutionDemand.entrySet().iterator().next();
 
-                executedOrders.addAll(orders.stream()
-                        .map(o -> executeOrder(o, entry)).collect(Collectors.toList()));
-            }
+                // Only execute orders if we have executions
+                if (totalPriceExecutionDemand.size() == 1) {
+                    Map.Entry<Integer, Integer> entry = totalPriceExecutionDemand.entrySet().iterator().next();
+                    executedOrders.addAll(orders.stream()
+                            .map(o -> executeOrder(o, entry)).collect(Collectors.toList()));
+                } else {
+                    executedOrders.addAll(orders);
+                }
+            });
         });
+
         return executedOrders;
     }
 
@@ -94,12 +97,12 @@ public class OrderBookStatisticsServiceImpl implements OrderBookStatisticsServic
 
     private Order executeOrder(final Order order, final Map.Entry<Integer, Integer> totalExecutionDemand) {
         int demand = totalExecutionDemand.getValue();
-        int price = totalExecutionDemand.getKey();
-        int quantity = order.getQuantity();
+        int executionPrice = totalExecutionDemand.getKey();
+        int orderQuantity = order.getQuantity();
         int orderPrice = order.getPrice();
         order.setValid(true);
 
-        if (orderPrice != MARKET_ORDER && orderPrice < price) {
+        if (orderPrice != MARKET_ORDER && orderPrice < executionPrice) {
             order.setValid(false);
             return order;
         }
@@ -107,14 +110,14 @@ public class OrderBookStatisticsServiceImpl implements OrderBookStatisticsServic
             return order;
         }
         if (demand > order.getQuantity()) {
-            order.setExecutedQuantity(quantity);
-            demand -= quantity;
+            order.setExecutedQuantity(orderQuantity);
+            demand -= orderQuantity;
         } else {
             order.setExecutedQuantity(demand);
             demand = 0;
         }
         totalExecutionDemand.setValue(demand);
-        order.setExecutionPrice(price);
+        order.setExecutionPrice(executionPrice);
 
         return order;
     }
