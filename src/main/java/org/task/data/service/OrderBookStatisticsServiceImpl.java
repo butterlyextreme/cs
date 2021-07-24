@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrderBookStatisticsServiceImpl implements OrderBookStatisticsService {
 
-    public static final int MARKET_PRICE = -1;
+    private static final int MARKET_ORDER = -1;
     private final OrdersRepository ordersRepository;
     private final ExecutionsRepository executionsRepository;
 
@@ -57,13 +57,14 @@ public class OrderBookStatisticsServiceImpl implements OrderBookStatisticsServic
     }
 
     private List<Order> processOrderExecutions() {
+
         Map<String, List<Order>> orderMap = ordersRepository.findAll()
                 .stream()
                 .map(this::toOrder)
                 .collect(Collectors.toList()).stream()
                 .collect(Collectors.groupingBy(Order::getInstrumentId));
 
-        final List<Order> allOrders = new ArrayList<>();
+        final List<Order> executedOrders = new ArrayList<>();
 
         orderMap.forEach((k, v) -> {
             // Retrieve the total price execution demand
@@ -76,11 +77,11 @@ public class OrderBookStatisticsServiceImpl implements OrderBookStatisticsServic
                 List<Order> orders = orderMap.get(k);
                 Map.Entry<Integer, Integer> entry = totalPriceExecutionDemand.entrySet().iterator().next();
 
-                allOrders.addAll(orders.stream()
+                executedOrders.addAll(orders.stream()
                         .map(o -> executeOrder(o, entry)).collect(Collectors.toList()));
             }
         });
-        return allOrders;
+        return executedOrders;
     }
 
     private List<OrderBookStat> getOrderBookStats(final List<Order> allOrders) {
@@ -95,10 +96,10 @@ public class OrderBookStatisticsServiceImpl implements OrderBookStatisticsServic
         int demand = totalExecutionDemand.getValue();
         int price = totalExecutionDemand.getKey();
         int quantity = order.getQuantity();
+        int orderPrice = order.getPrice();
         order.setValid(true);
-        int orderPrice = order.getPrice() == null ? MARKET_PRICE : order.getPrice();
 
-        if (orderPrice != MARKET_PRICE && orderPrice < price) {
+        if (orderPrice != MARKET_ORDER && orderPrice < price) {
             order.setValid(false);
             return order;
         }

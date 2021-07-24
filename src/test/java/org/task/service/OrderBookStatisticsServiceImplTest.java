@@ -33,6 +33,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 public class OrderBookStatisticsServiceImplTest {
 
+    public static final int MARKET_ORDER = -1;
     final String INSTRUMENT_ONE = "INSTRUMENT_0NE";
     final String INSTRUMENT_TWO = "INSTRUMENT_TWO";
 
@@ -100,7 +101,7 @@ public class OrderBookStatisticsServiceImplTest {
                 Arguments.of(100, 70, "Order(id=e4944dab-2846-44d5-891a-0ba3a78fb1cc, instrumentId=INSTRUMENT_0NE, price=100, quantity=50, date=2020-12-22T10:15:30Z, valid=true, ExecutionPrice=70, executedQuantity=50)"),
                 Arguments.of(100, 100, "Order(id=e4944dab-2846-44d5-891a-0ba3a78fb1cc, instrumentId=INSTRUMENT_0NE, price=100, quantity=50, date=2020-12-22T10:15:30Z, valid=true, ExecutionPrice=100, executedQuantity=50)"),
                 Arguments.of(70, 100, "Order(id=e4944dab-2846-44d5-891a-0ba3a78fb1cc, instrumentId=INSTRUMENT_0NE, price=70, quantity=50, date=2020-12-22T10:15:30Z, valid=false, ExecutionPrice=0, executedQuantity=0)"),
-                Arguments.of(null, 100, "Order(id=e4944dab-2846-44d5-891a-0ba3a78fb1cc, instrumentId=INSTRUMENT_0NE, price=null, quantity=50, date=2020-12-22T10:15:30Z, valid=true, ExecutionPrice=100, executedQuantity=50)")
+                Arguments.of(MARKET_ORDER, 100, "Order(id=e4944dab-2846-44d5-891a-0ba3a78fb1cc, instrumentId=INSTRUMENT_0NE, price=-1, quantity=50, date=2020-12-22T10:15:30Z, valid=true, ExecutionPrice=100, executedQuantity=50)")
         );
     }
 
