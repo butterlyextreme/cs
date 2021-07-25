@@ -17,13 +17,15 @@ import static java.lang.String.format;
 @RequiredArgsConstructor
 public class OrderBookServiceImpl implements OrderBookService {
 
+    public static final String OPEN = "OPEN";
+    public static final String CLOSED = "CLOSED";
     private final OrderBookRepository orderBookRepository;
 
     public String createBook(final String instrumentId) {
         log.debug("Creating order book for instrument [{}]", instrumentId);
         OrderBookEntity orderBookEntity = new OrderBookEntity();
         orderBookEntity.setInstrumentId(instrumentId);
-        orderBookEntity.setState("OPEN");
+        orderBookEntity.setState(OPEN);
         orderBookEntity = orderBookRepository.save(orderBookEntity);
         log.info("Successfully created order book for instrument ID [{}]", instrumentId);
         return orderBookEntity.getId().toString();
@@ -34,11 +36,10 @@ public class OrderBookServiceImpl implements OrderBookService {
                 () -> new EntityNotFoundException(
                         format("OrderBook with id: %s has not been found", id)));
 
-        orderBookEntity.setState("CLOSED");
+        orderBookEntity.setState(CLOSED);
         orderBookRepository.save(orderBookEntity);
         log.debug("Successfully closed order book for comment ID [{}]", id);
     }
-
 }
 
 

@@ -10,7 +10,7 @@ To access the built in H2 database go here:
 >http://localhost:8080/h2-console/login.do
 >sa/password
 
-The system comes provisioned with two order books, one closed and one open. The former having a few executions associated.
+The system comes provisioned (flyway) with two order books, one closed and one open. The former having a few executions associated.
 
 ## Unit Test Coverage
 I only provided samples of what I would normally use more extensively for the different aspects of the application. 
@@ -22,6 +22,6 @@ I only provided samples of what I would normally use more extensively for the di
 
 ## Design
 I designed the solution to solve the business logic noted in the task description, that is to say I didn't over think or ever-engineer it.
-Hitherto the solution is not concerned with the complexities around the adding of orders or executions and by implication the validations required in such circumstances
+Hitherto the solution ignores the complexities around the adding of orders or executions and by implication the validations required in such circumstances.
 
   
